@@ -63,3 +63,6 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+# pixi environments
+.pixi/*
+!.pixi/config.toml

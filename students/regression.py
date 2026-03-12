@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import r2_score
-
+from data_processing import (load_heart_disease_data, preprocess_data, prepare_regression_data, split_and_scale)
 
 def train_elasticnet_grid(X_train, y_train, l1_ratios, alphas):
     """
@@ -38,7 +38,27 @@ def train_elasticnet_grid(X_train, y_train, l1_ratios, alphas):
     #   - Calculate R² score on training data
     #   - Store results
     # - Return DataFrame with results
-    pass
+    
+    results = []
+    
+    for l1 in l1_ratios:
+        for alpha in alphas:
+            model = ElasticNet (alpha=alpha, l1_ratio=l1, max_iter =5000, random_state = 42)
+            model.fit(X_train, y_train)
+            
+            r2 = r2_score(y_train, model.predict(X_train))
+            
+            results.append({
+                'l1_ratio':l1, 
+                'alpha':alpha, 
+                'r2_score':r2,
+                'model':model
+                })
+           
+    results_df = pd.DataFrame(results)
+    return results_df
+            
+    
 
 
 def create_r2_heatmap(results_df, l1_ratios, alphas, output_path=None):
@@ -68,7 +88,19 @@ def create_r2_heatmap(results_df, l1_ratios, alphas, output_path=None):
     # - Add colorbar
     # - Save to output_path if provided
     # - Return figure object
-    pass
+    
+    heatmap_data = results_df.pivot(index='alpha', columns ='l1_ratio', values ='r2_score')
+    plt.figure(figsize = (6,4))
+    sns.heatmap(heatmap_data, annot=True, cmap = 'viridis', fmt= '.2f', cbar_kws = {'label':'R2 Score'})
+    plt.xlabel('L1 ratio')
+    plt.ylabel('Alpha')
+    plt.title('R2 Score Heatmap for ElasticNet Hyperparameters')
+    if output_path:
+        plt.savefig(output_path)
+    fig = plt.gcf()
+    return fig
+
+
 
 
 def get_best_elasticnet_model(X_train, y_train, X_test, y_test, 
@@ -103,12 +135,42 @@ def get_best_elasticnet_model(X_train, y_train, X_test, y_test,
         - 'results_df': full results DataFrame
     """
     if l1_ratios is None:
-        l1_ratios = [0.1, 0.3, 0.5, 0.7, 0.9]
+        l1_ratios = [0.3, 0.5, 0.7,0.9]
     if alphas is None:
-        alphas = [0.001, 0.01, 0.1, 1.0, 10.0]
+        alphas = [0.01, 0.1, 1.0,10]
     
     # TODO: Implement best model selection
     # - Train models using train_elasticnet_grid
     # - Select model with highest test R² (not training R²)
     # - Return dictionary with best model and parameters
-    pass
+    
+    results_df = train_elasticnet_grid(X_train, y_train, l1_ratios, alphas)
+    
+    test_r2_scores = []
+    
+    for model in results_df['model']:
+        y_pred_test = model.predict(X_test)
+        test_r2 = r2_score(y_test, y_pred_test)
+        test_r2_scores.append(test_r2)
+        
+    results_df['test_r2']= test_r2_scores
+    best_index = results_df['test_r2'].idxmax()
+    best_row = results_df.loc[best_index]
+        
+    best_model = best_row['model']
+    best_l1_ratio = best_row['l1_ratio']
+    best_alpha = best_row['alpha']
+        
+    train_r2 = best_row['r2_score']
+    test_r2 = best_row['test_r2']
+        
+    return {
+            'model': best_model,
+            'best_l1_ratio': best_l1_ratio,
+            'best_alpha': best_alpha,
+            'train_r2': train_r2,
+            'test_r2': test_r2,
+            'results_df': results_df
+        }
+
+        

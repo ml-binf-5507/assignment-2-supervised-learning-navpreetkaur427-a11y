@@ -6,9 +6,12 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import os
 
+import seaborn as sns
 
-def load_heart_disease_data(filepath):
+def load_heart_disease_data(filepath='data/heart_disease_uci.csv'):
+    
     """
     Load the heart disease dataset from CSV.
     
@@ -38,12 +41,20 @@ def load_heart_disease_data(filepath):
     # Hint: Use pd.read_csv()
     # Hint: Check if file exists and raise helpful error if not
     # TODO: Implement data loading
-    pass
+    
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+    
+    df = pd.read_csv(filepath)
+    if df.empty:
+        raise ValueError(f"CSV file is empty: {filepath}")
+    
+    return df
 
 
 def preprocess_data(df):
     """
-    Handle missing values, encode categorical variables, and clean data.
+    Handle missing values, encode categorical variables, and clean data. 
     
     Parameters
     ----------
@@ -59,7 +70,32 @@ def preprocess_data(df):
     # - Handle missing values
     # - Encode categorical variables (e.g., sex, cp, fbs, etc.)
     # - Ensure all columns are numeric
-    pass
+    
+    df = df.copy()
+    df.replace("?",np.nan)
+    
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            try:
+                df[col] = pd.to_numeric(df[col])
+            except ValueError:
+                pass
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    cat_cols = df.select_dtypes(exclude=[np.number]).columns
+    
+    for col in numeric_cols:
+        df[col] = df[col].fillna(df[col].median())
+    for col in cat_cols:
+        df[col] = df[col].fillna(df[col].mode()[0])
+    
+    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+    
+    
+    df = df.astype(float)
+    
+    return df
+    
+
 
 
 def prepare_regression_data(df, target='chol'):
@@ -82,7 +118,10 @@ def prepare_regression_data(df, target='chol'):
     # - Remove rows with missing chol values
     # - Exclude chol from features
     # - Return X (features) and y (target)
-    pass
+    df = df.dropna(subset =[target])
+    X = df.drop(columns=[target])
+    y = df[target]
+    return X, y
 
 
 def prepare_classification_data(df, target='num'):
@@ -106,7 +145,12 @@ def prepare_classification_data(df, target='num'):
     # - Exclude target from features
     # - Exclude chol from features
     # - Return X (features) and y (target)
-    pass
+    df = df.copy()
+    
+    df[target] = (df[target] > 0).astype(int)
+    X =df.drop(columns=[target, 'chol'])
+    y = df[target]
+    return X,y
 
 
 def split_and_scale(X, y, test_size=0.2, random_state=42):
@@ -135,4 +179,10 @@ def split_and_scale(X, y, test_size=0.2, random_state=42):
     # - Fit StandardScaler on training data only
     # - Transform both train and test data
     # - Return scaled data and scaler object
-    pass
+    stratify = y if len(pd.Series(y).unique()) == 2 else None
+    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=test_size, random_state=random_state, stratify =stratify)
+    
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    return X_train_scaled, X_test_scaled, y_train, y_test, scaler
