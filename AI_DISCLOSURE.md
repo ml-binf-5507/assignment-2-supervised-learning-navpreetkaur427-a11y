@@ -38,7 +38,7 @@ _____ Yes
 
 3. **How much of your final code came from AI vs. your own work?** (e.g., "AI gave me the formula, I wrote the loop" or "AI helped me debug an error")
    
-   AI helped me debug an error.
+   AI helped me debug an error and also gave me formula and I modify that.
 
 
 4. **Can you explain your code?** (Can you walk through what each function does and why you wrote it that way?)
